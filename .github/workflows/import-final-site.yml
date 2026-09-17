@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.upload/**'
+      - 'site-final.zip'
 
 permissions:
   contents: write
@@ -16,17 +16,16 @@ jobs:
       - name: Baixar repositorio
         uses: actions/checkout@v4
 
-      - name: Reconstruir pacote final
-        run: |
-          cat .upload/site-final.part-* > /tmp/site-final.zip
-          unzip -t /tmp/site-final.zip
+      - name: Validar pacote
+        run: unzip -t site-final.zip
 
       - name: Extrair e substituir conteudo
         run: |
           TMPDIR=$(mktemp -d)
-          unzip -q /tmp/site-final.zip -d "$TMPDIR"
-          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          unzip -q site-final.zip -d "$TMPDIR"
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'site-final.zip' -exec rm -rf {} +
           cp -a "$TMPDIR"/. ./
+          rm -f site-final.zip
 
       - name: Commitar versao final
         run: |
