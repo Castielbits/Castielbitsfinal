@@ -1,10 +1,10 @@
-name: Importar site final
+name: Importar site original
 
 on:
   push:
     branches: [main]
     paths:
-      - 'site-final.zip'
+      - 'castiel-original.part-*'
 
 permissions:
   contents: write
@@ -16,21 +16,36 @@ jobs:
       - name: Baixar repositorio
         uses: actions/checkout@v4
 
-      - name: Validar pacote
-        run: unzip -t site-final.zip
+      - name: Verificar se todas as partes chegaram
+        id: parts
+        shell: bash
+        run: |
+          COUNT=$(ls castiel-original.part-* 2>/dev/null | wc -l)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" -lt 6 ]; then
+            echo "Ainda faltam partes do arquivo original. Recebidas: $COUNT/6"
+          fi
 
-      - name: Extrair e substituir conteudo
+      - name: Reconstruir ZIP original
+        if: steps.parts.outputs.count == '6'
+        run: |
+          cat castiel-original.part-* > /tmp/castielbits.com.br.zip
+          echo "bbfca67f031f1e2bbe2a45073c87d0074e7454d124a3e41df2e6cd54d5d55636  /tmp/castielbits.com.br.zip" | sha256sum -c -
+          unzip -t /tmp/castielbits.com.br.zip
+
+      - name: Extrair original sem alterar os arquivos
+        if: steps.parts.outputs.count == '6'
         run: |
           TMPDIR=$(mktemp -d)
-          unzip -q site-final.zip -d "$TMPDIR"
-          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'site-final.zip' -exec rm -rf {} +
+          unzip -q /tmp/castielbits.com.br.zip -d "$TMPDIR"
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
           cp -a "$TMPDIR"/. ./
-          rm -f site-final.zip
 
-      - name: Commitar versao final
+      - name: Commitar site original
+        if: steps.parts.outputs.count == '6'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Upload final Castiel Bits site"
+          git commit -m "Upload original Castiel Bits site"
           git push
